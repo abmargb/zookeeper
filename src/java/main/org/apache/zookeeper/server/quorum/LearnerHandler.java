@@ -389,7 +389,15 @@ public class LearnerHandler extends Thread {
                     while (dis.available() > 0) {
                         long sess = dis.readLong();
                         int to = dis.readInt();
-                        leader.zk.touch(sess, to);
+                        boolean updateSample = dis.readBoolean();
+                        long iaMean = dis.readLong();
+                        long iaStdDev = dis.readLong();
+                        
+                        if (!updateSample) {
+                            leader.zk.touch(sess, to);
+                        } else {
+                            leader.zk.updateHeartbeatSample(sess, to, iaMean, iaStdDev);
+                        }
                     }
                     break;
                 case Leader.REVALIDATE:

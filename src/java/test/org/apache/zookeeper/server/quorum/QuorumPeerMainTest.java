@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 import org.apache.log4j.Layout;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 import org.apache.log4j.WriterAppender;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.PortAssignment;
@@ -38,6 +39,7 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.test.ClientBase;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 
@@ -46,6 +48,12 @@ import org.junit.Test;
  *
  */
 public class QuorumPeerMainTest extends QuorumPeerTestBase {
+    
+    @Before
+    public void initLogger() {
+        PropertyConfigurator.configure("conf/log4j.properties");
+    }
+    
     /**
      * Verify the ability to start a cluster.
      */

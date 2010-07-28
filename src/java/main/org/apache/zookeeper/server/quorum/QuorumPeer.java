@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.common.fd.FailureDetector;
 import org.apache.zookeeper.jmx.MBeanRegistry;
 import org.apache.zookeeper.jmx.ZKMBeanInfo;
 import org.apache.zookeeper.server.NIOServerCnxn;
@@ -242,6 +243,11 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
      */
     protected int tick;
 
+    /**
+     * The failure detector to be used in session tracking
+     */
+    protected FailureDetector sessionFd;
+    
     /**
      * This class simply responds to requests for the current leader of this
      * node.
@@ -953,5 +959,9 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
 
     public boolean isRunning() {
         return running;
+    }
+    
+    public void setSessionFd(FailureDetector fd) {
+        this.sessionFd = fd;
     }
 }

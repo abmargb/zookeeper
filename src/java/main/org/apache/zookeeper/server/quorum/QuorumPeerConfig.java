@@ -34,6 +34,9 @@ import java.util.Map.Entry;
 import org.apache.log4j.Logger;
 import org.apache.log4j.MDC;
 
+import org.apache.zookeeper.common.fd.FailureDetector;
+import org.apache.zookeeper.common.fd.FailureDetectorFactory;
+import org.apache.zookeeper.common.fd.SlicedHeartbeatFailureDetector;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.quorum.QuorumPeer.LearnerType;
 import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
@@ -54,6 +57,8 @@ public class QuorumPeerConfig {
     /** defaults to -1 if not set explicitly */
     protected int maxSessionTimeout = -1;
 
+    protected FailureDetector sessionsFD;
+    
     protected int initLimit;
     protected int syncLimit;
     protected int electionAlg = 3;
@@ -123,6 +128,10 @@ public class QuorumPeerConfig {
     throws IOException, ConfigException {
         int clientPort = 0;
         String clientPortAddress = null;
+        
+        String sessionFdName = null;
+        Map<String, String> fdOptions = new HashMap<String, String>();
+        
         for (Entry<Object, Object> entry : zkProp.entrySet()) {
             String key = entry.getKey().toString().trim();
             String value = entry.getValue().toString().trim();
@@ -136,6 +145,8 @@ public class QuorumPeerConfig {
                 clientPortAddress = value.trim();
             } else if (key.equals("tickTime")) {
                 tickTime = Integer.parseInt(value);
+            } else if (key.equals("sessionFD")) {
+                sessionFdName = value;
             } else if (key.equals("maxClientCnxns")) {
                 maxClientCnxns = Integer.parseInt(value);
             } else if (key.equals("minSessionTimeout")) {
@@ -210,6 +221,8 @@ public class QuorumPeerConfig {
                 int dot = key.indexOf('.');
                 long sid = Long.parseLong(key.substring(dot + 1));
                 serverWeight.put(sid, Long.parseLong(value));
+            } else if (key.startsWith("fd.")) {
+                fdOptions.put(key, value);
             } else {
                 System.setProperty("zookeeper." + key, value);
             }
@@ -242,6 +255,22 @@ public class QuorumPeerConfig {
         if (minSessionTimeout > maxSessionTimeout) {
             throw new IllegalArgumentException(
                     "minSessionTimeout must not be larger than maxSessionTimeout");
+        }
+        if (sessionFdName == null) {
+            this.sessionsFD = new SlicedHeartbeatFailureDetector(tickTime);
+        } else {
+            
+            Map<String,String> fdOptionsPrx = new HashMap<String,String>();
+            String prefix = "fd." + sessionFdName + ".";
+            
+            for (Entry<String, String> entry : fdOptions.entrySet()) {
+                if (entry.getKey().startsWith(prefix)) {
+                    String key = entry.getKey().substring(prefix.length());
+                    fdOptionsPrx.put(key, entry.getValue());
+                }
+            }
+            
+            this.sessionsFD = new FailureDetectorFactory().createFd(sessionFdName, fdOptionsPrx);
         }
         if (servers.size() > 1) {
             if (initLimit == 0) {
@@ -340,6 +369,8 @@ public class QuorumPeerConfig {
     public int getSyncLimit() { return syncLimit; }
     public int getElectionAlg() { return electionAlg; }
     public int getElectionPort() { return electionPort; }    
+    
+    public FailureDetector getSesssionFailureDetector() { return sessionsFD; };
     
     public QuorumVerifier getQuorumVerifier() {   
         return quorumVerifier;
